@@ -1,0 +1,10 @@
+{
+  "resolution": "main",
+  "tree": {
+    "src": "https://raw.githubusercontent.com/types/npm-chokidar/b60918f9b3b996a68f1ea27f192233475cfbbc22/typings.json",
+    "raw": "registry:npm/chokidar#1.6.0+20160817083815",
+    "main": "index.d.ts",
+    "version": "1.6.0",
+    "name": "chokidar"
+  }
+}

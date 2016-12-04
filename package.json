@@ -1,0 +1,36 @@
+{
+  "name": "node-hot",
+  "version": "0.1.1",
+  "description": "🔥 Hot-reloading for Node.js",
+  "license": "MIT",
+  "author": {
+    "name": "Mikael Hermansson"
+  },
+  "homepage": "https://github.com/mihe/node-hot",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:mihe/node-hot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mihe/node-hot/issues"
+  },
+  "keywords": [
+    "node",
+    "hot",
+    "reload",
+    "hot-reload"
+  ],
+  "main": "index.js",
+  "devDependencies": {
+    "typescript": "2.1.1"
+  },
+  "dependencies": {
+    "chokidar": "1.6.1",
+    "dependency-graph": "0.5.0",
+    "lodash.intersection": "4.4.0"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -p . -w"
+  }
+}

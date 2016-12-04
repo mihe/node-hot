@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "es3",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "allowJs": false,
+    "allowSyntheticDefaultImports": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "removeComments": true,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "typeRoots": [
+      "./typings/modules",
+      "./typings/globals"
+    ]
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

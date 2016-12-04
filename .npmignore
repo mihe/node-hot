@@ -1,0 +1,6 @@
+.vscode
+typings
+.editorconfig
+.gitignore
+index.ts
+tsconfig.json
