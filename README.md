@@ -23,8 +23,6 @@ To actually perform the reload you will need to `accept` the reload through the
 `module.hot` object somewhere in your hierarchy, like so:
 
 ```js
-// main.js
-
 if (module.hot) {
     // Notify node-hot that this module will accept a reload
     module.hot.accept();
@@ -33,7 +31,9 @@ if (module.hot) {
 
 node-hot will traverse the dependants of any changed module and look for an
 accepting module, meaning you could get away with only having
-`module.hot.accept` in your entry point if you wish.
+`module.hot.accept` in one of your base modules. However, due to limitations
+in node-hot, you will not be able to `accept` from the main module (the entry
+point).
 
 If you wish to preserve state inbetween reloads, you can store that state in the
 `module.hot.data` object. The callback sent into `module.hot.dispose` will be
@@ -41,8 +41,6 @@ invoked just before your module gets reloaded and will allow you to store your
 state in the `data` object, like so:
 
 ```js
-// main.js
-
 var state = {
     counter: 0
 }
