@@ -1,7 +1,7 @@
-# node-hot
+# 🔥 node-hot
 
 node-hot is a Node.js package that will automatically monitor and hot reload
-modules.
+modules (stuff that you `require`).
 
 Based off of [this article by Kenneth Chung][kentor].
 
@@ -16,50 +16,71 @@ npm install --save-dev node-hot
 
 ### Usage
 
-Make sure you `require('node-hot')` before any other modules. Any
-subsequent `require` calls will result in those files being monitored.
+##### Accept
 
-To actually perform the reload you will need to `accept` the reload through the
-`module.hot` object somewhere in your hierarchy, like so:
+Make sure you `require('node-hot')` before any other modules. Only modules
+`require`'d after node-hot will be monitored<sup>[1]</sup>.
+
+To actually perform the reload you can choose to `accept` the reload through
+the `module.hot` object somewhere in your hierarchy, like so:
 
 ```js
 if (module.hot) {
-    // Notify node-hot that this module will accept a reload
+    // Notify node-hot that this module will accept a reload (optional)
     module.hot.accept();
 }
 ```
 
-node-hot will traverse the dependants of any changed module and look for an
-accepting module, meaning you could get away with only having
-`module.hot.accept` in one of your base modules. However, due to limitations
-in node-hot, you will not be able to `accept` from the main module (the entry
-point).
+node-hot will traverse the dependants of any changed module, looking for an
+accepting module and invalidating the cache as it goes along. Once it finds an
+accepting module it will then re-`require` that module, which will in turn
+re-`require` all of the previously invalidated modules as well. This means you
+can get away with only having `module.hot.accept` in a single
+module<sup>[2]</sup>.
+
+You can also choose omit the `accept` entirely, in which case node-hot will
+automatically `accept` when it reaches a module with no dependants, which will
+most likely be the modules `require`'d by your main module.
+
+##### Stash
 
 If you wish to preserve state inbetween reloads, you can store that state in the
-`module.hot.data` object. The callback sent into `module.hot.dispose` will be
-invoked just before your module gets reloaded and will allow you to store your
-state in the `data` object, like so:
+`stash` object. The function sent into `module.hot.store` will be invoked just
+before your module gets reloaded and will allow you to store your state in the
+`stash` object, like so:
 
 ```js
-var state = {
+var myState = {
     counter: 0
 }
 
 if (module.hot) {
-    // Notify node-hot that this module will accept a reload
+    // Notify node-hot that this module will accept a reload (optional)
     module.hot.accept();
 
-    // Restore state from before the reload, if there is any
-    if (module.hot.data.state) {
-        state = JSON.parse(module.hot.data.state);
-    }
+    // Setup storing of state for upcoming reloads
+    module.hot.store(function(stash) {
+        stash.myState = JSON.stringify(myState);
+    });
 
-    // Setup storing of the state for future reloads
-    module.hot.dispose(function(data) {
-        data.state = JSON.stringify(state);
+    // Restore state from previous reload, if there is any
+    module.hot.restore(function(stash) {
+        myState = JSON.parse(stash.myState);
     });
 }
 ```
+
+Restoring said state is as simple as passing a function to `module.hot.restore`,
+which will execute post-reload and provide you with the same `stash` object as
+before the reload.
+
+
+[1]: node-hot deliberately ignores anything `require`'d from `node_modules`,
+meaning those modules won't be reloadable.
+
+[2]: Due to limitations in node-hot, you will not be able to `accept` from the
+main module (the entry point). This means that the main module can't be
+reloaded.
 
 
 ## License

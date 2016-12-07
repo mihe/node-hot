@@ -1,6 +1,7 @@
 .vscode
+src
 typings
 .editorconfig
+.gitattributes
 .gitignore
-index.ts
 tsconfig.json

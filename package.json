@@ -20,14 +20,12 @@
     "reload",
     "hot-reload"
   ],
-  "main": "index.js",
+  "main": "dist/index.js",
   "devDependencies": {
     "typescript": "2.1.1"
   },
   "dependencies": {
-    "chokidar": "1.6.1",
-    "dependency-graph": "0.5.0",
-    "lodash.intersection": "4.4.0"
+    "chokidar": "1.6.1"
   },
   "scripts": {
     "build": "tsc -p .",
