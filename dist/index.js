@@ -90,7 +90,9 @@ Module.prototype.require = function (name) {
         var modulePath = Module._resolveFilename(name, caller);
         if (!utils_1.isPackage(modulePath)) {
             var dependency = require.cache[modulePath];
-            watch(caller, dependency);
+            if (dependency) {
+                watch(caller, dependency);
+            }
         }
     }
     return exports;

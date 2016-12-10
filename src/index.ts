@@ -32,7 +32,7 @@ const _Module = {
 
 const graph = new Graph();
 const registry = new Map<IRegistryEntry>();
-const watcher = chokidar.watch([])
+const watcher = chokidar.watch([]);
 
 watcher.on('change', (file: string) => {
 	const entry = registry[file];
@@ -125,7 +125,9 @@ Module.prototype.require = function (name: string) {
 		const modulePath = Module._resolveFilename(name, caller) as string;
 		if (!isPackage(modulePath)) {
 			const dependency = require.cache[modulePath] as NodeModule;
-			watch(caller, dependency);
+			if (dependency) {
+				watch(caller, dependency);
+			}
 		}
 	}
 
