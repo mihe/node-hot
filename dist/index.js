@@ -15,20 +15,25 @@ watcher.on('change', function (file) {
     var entry = registry[file];
     if (entry) {
         utils_1.logInfo('Changed:', path.relative(process.cwd(), entry.id));
-        reload(entry);
+        try {
+            reload(entry).forEach(function (acceptee) {
+                utils_1.logInfo('Reloading:', path.relative(process.cwd(), acceptee));
+                _Module.require.call(module, acceptee);
+            });
+        }
+        catch (err) {
+            utils_1.logError(err);
+        }
     }
 });
-function reload(entry) {
+function reload(entry, acceptees) {
+    if (acceptees === void 0) { acceptees = new Array(); }
     entry.store();
     delete require.cache[entry.id];
     var dependants = graph.getDependantsOf(entry.id);
     if (entry.accepted || dependants.length == 0) {
-        try {
-            utils_1.logInfo('Reloading:', path.relative(process.cwd(), entry.id));
-            _Module.require.call(module, entry.id);
-        }
-        catch (err) {
-            utils_1.logError(err);
+        if (acceptees.indexOf(entry.id) < 0) {
+            acceptees.push(entry.id);
         }
     }
     else {
@@ -36,10 +41,11 @@ function reload(entry) {
             var dependant = dependants_1[_i];
             var dependantEntry = registry[dependant];
             if (dependantEntry) {
-                reload(dependantEntry);
+                reload(dependantEntry, acceptees);
             }
         }
     }
+    return acceptees;
 }
 function register(id) {
     var entry = registry[id];

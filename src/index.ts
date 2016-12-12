@@ -38,32 +38,38 @@ watcher.on('change', (file: string) => {
 	const entry = registry[file];
 	if (entry) {
 		logInfo('Changed:', path.relative(process.cwd(), entry.id));
-		reload(entry);
+
+		try {
+			reload(entry).forEach(acceptee => {
+				logInfo('Reloading:', path.relative(process.cwd(), acceptee));
+				_Module.require.call(module, acceptee);
+			});
+		} catch (err) {
+			logError(err);
+		}
 	}
 });
 
-function reload(entry: IRegistryEntry) {
+function reload(entry: IRegistryEntry, acceptees = new Array<string>()) {
 	entry.store();
-
 	delete require.cache[entry.id];
 
 	const dependants = graph.getDependantsOf(entry.id);
 
 	if (entry.accepted || dependants.length == 0) {
-		try {
-			logInfo('Reloading:', path.relative(process.cwd(), entry.id));
-			_Module.require.call(module, entry.id);
-		} catch (err) {
-			logError(err);
+		if (acceptees.indexOf(entry.id) < 0) {
+			acceptees.push(entry.id);
 		}
 	} else {
 		for (const dependant of dependants) {
 			const dependantEntry = registry[dependant];
 			if (dependantEntry) {
-				reload(dependantEntry);
+				reload(dependantEntry, acceptees);
 			}
 		}
 	}
+
+	return acceptees;
 }
 
 function register(id: string) {
