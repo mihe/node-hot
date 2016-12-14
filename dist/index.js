@@ -87,7 +87,7 @@ function watch(caller, dependency) {
     inject(caller, caller.filename);
     inject(dependency, dependency.filename);
     graph.addDependency(caller.filename, dependency.filename);
-    watcher.add(dependency.filename);
+    watcher.add([caller.filename, dependency.filename]);
 }
 Module.prototype.require = function (name) {
     var caller = this;
