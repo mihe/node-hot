@@ -1,8 +1,8 @@
 import * as Module from 'module';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
-import Graph from './graph';
-import { Map, logInfo, logError, isPackage } from './utils';
+import { Graph } from './graph';
+import { Map, logInfo, logError, isEligible } from './utils';
 
 export type StashFn = (stash: any) => void;
 
@@ -53,10 +53,10 @@ watcher.on('change', (file: string) => {
 function reload(entry: IRegistryEntry, acceptees = new Array<string>()) {
 	entry.store();
 	delete require.cache[entry.id];
+	graph.removeDependencies(entry.id).forEach(d => watcher.unwatch(d));
 
 	const dependants = graph.getDependantsOf(entry.id);
-
-	if (entry.accepted || dependants.length == 0) {
+	if (entry.accepted || dependants.length === 0) {
 		if (acceptees.indexOf(entry.id) < 0) {
 			acceptees.push(entry.id);
 		}
@@ -104,7 +104,7 @@ function inject(module: NodeModule, id: string) {
 			entry.store = () => {
 				entry.stash = {};
 				stasher(entry.stash);
-			}
+			};
 		},
 		restore: (stasher: StashFn) => {
 			if (entry.stash) {
@@ -115,24 +115,17 @@ function inject(module: NodeModule, id: string) {
 	};
 }
 
-function watch(caller: NodeModule, dependency: NodeModule) {
-	inject(caller, caller.filename);
-	inject(dependency, dependency.filename);
-
-	graph.addDependency(caller.filename, dependency.filename);
-	watcher.add([caller.filename, dependency.filename]);
-}
-
 Module.prototype.require = function (name: string) {
 	const caller = this as NodeModule;
 	const exports = _Module.require.call(caller, name);
 
 	if (caller !== process.mainModule) {
 		const modulePath = Module._resolveFilename(name, caller) as string;
-		if (!isPackage(modulePath)) {
+		if (isEligible(modulePath)) {
 			const dependency = require.cache[modulePath] as NodeModule;
 			if (dependency) {
-				watch(caller, dependency);
+				graph.addDependency(caller.filename, dependency.filename);
+				watcher.add([caller.filename, dependency.filename]);
 			}
 		}
 	}
@@ -141,7 +134,7 @@ Module.prototype.require = function (name: string) {
 };
 
 Module.prototype.load = function (filename: string) {
-	if (!isPackage(filename)) {
+	if (isEligible(filename)) {
 		inject(this, filename);
 	}
 

@@ -8,7 +8,7 @@ var _Module = {
     load: Module.prototype.load,
     require: Module.prototype.require
 };
-var graph = new graph_1["default"]();
+var graph = new graph_1.Graph();
 var registry = new utils_1.Map();
 var watcher = chokidar.watch([]);
 watcher.on('change', function (file) {
@@ -30,8 +30,9 @@ function reload(entry, acceptees) {
     if (acceptees === void 0) { acceptees = new Array(); }
     entry.store();
     delete require.cache[entry.id];
+    graph.removeDependencies(entry.id).forEach(function (d) { return watcher.unwatch(d); });
     var dependants = graph.getDependantsOf(entry.id);
-    if (entry.accepted || dependants.length == 0) {
+    if (entry.accepted || dependants.length === 0) {
         if (acceptees.indexOf(entry.id) < 0) {
             acceptees.push(entry.id);
         }
@@ -83,28 +84,23 @@ function inject(module, id) {
         }
     };
 }
-function watch(caller, dependency) {
-    inject(caller, caller.filename);
-    inject(dependency, dependency.filename);
-    graph.addDependency(caller.filename, dependency.filename);
-    watcher.add([caller.filename, dependency.filename]);
-}
 Module.prototype.require = function (name) {
     var caller = this;
     var exports = _Module.require.call(caller, name);
     if (caller !== process.mainModule) {
         var modulePath = Module._resolveFilename(name, caller);
-        if (!utils_1.isPackage(modulePath)) {
+        if (utils_1.isEligible(modulePath)) {
             var dependency = require.cache[modulePath];
             if (dependency) {
-                watch(caller, dependency);
+                graph.addDependency(caller.filename, dependency.filename);
+                watcher.add([caller.filename, dependency.filename]);
             }
         }
     }
     return exports;
 };
 Module.prototype.load = function (filename) {
-    if (!utils_1.isPackage(filename)) {
+    if (utils_1.isEligible(filename)) {
         inject(this, filename);
     }
     _Module.load.call(this, filename);

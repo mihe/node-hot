@@ -10,6 +10,10 @@ function isPackage(modulePath: string) {
 	return modulePath.indexOf(nodeModulesPath) > 0;
 }
 
+function isEligible(modulePath: string) {
+	return !isPackage(modulePath);
+}
+
 function logInfo(...msg: any[]) {
 	console.log('[node-hot]', ...msg);
 }
@@ -21,6 +25,7 @@ function logError(...msg: any[]) {
 export {
 	Map,
 	isPackage,
+	isEligible,
 	logInfo,
 	logError
 }
