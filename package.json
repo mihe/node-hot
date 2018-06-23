@@ -21,6 +21,7 @@
     "hot-reload"
   ],
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "devDependencies": {
     "tslint": "4.1.1",
     "typescript": "2.1.4"
