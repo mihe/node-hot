@@ -28,4 +28,4 @@ export {
 	isEligible,
 	logInfo,
 	logError
-}
+};

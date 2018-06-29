@@ -23,11 +23,13 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "devDependencies": {
-    "tslint": "4.1.1",
-    "typescript": "2.1.4"
+    "@types/chokidar": "1.7.5",
+    "@types/node": "10.3.6",
+    "tslint": "5.10.0",
+    "typescript": "2.9.2"
   },
   "dependencies": {
-    "chokidar": "1.6.1"
+    "chokidar": "2.0.4"
   },
   "scripts": {
     "build": "tsc -p .",

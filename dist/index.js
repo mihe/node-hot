@@ -1,5 +1,6 @@
 "use strict";
-var Module = require("module");
+exports.__esModule = true;
+var Module = require('module');
 var path = require("path");
 var chokidar = require("chokidar");
 var graph_1 = require("./graph");

@@ -4,9 +4,8 @@ export interface Hot {
     store(callback: StashFn): void;
     restore(callback: StashFn): void;
 }
-declare global  {
+declare global {
     interface NodeModule {
         hot: Hot;
     }
 }
-export {};

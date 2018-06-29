@@ -8,28 +8,27 @@
     "allowSyntheticDefaultImports": false,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
+    "alwaysStrict": true,
     "declaration": true,
+    "esModuleInterop": false,
     "forceConsistentCasingInFileNames": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
+    "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "removeComments": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
+    "strict": true,
+    "strictFunctionTypes": true,
     "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
-    "typeRoots": [
-      "./typings/modules",
-      "./typings/globals"
-    ]
+    "strictPropertyInitialization": true,
+    "suppressImplicitAnyIndexErrors": true
   },
   "include": [
     "src/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
   ]
 }
