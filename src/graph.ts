@@ -1,25 +1,23 @@
-import { Map } from './utils';
-
 class Graph {
-	public dependants = new Map<string[]>();
-	public dependencies = new Map<string[]>();
+	public dependants = new Map<string, string[]>();
+	public dependencies = new Map<string, string[]>();
 
 	public addDependency(dependant: string, dependency: string): void {
-		const dependencies = this.dependencies[dependant] || [];
+		const dependencies = this.dependencies.get(dependant) || [];
 		if (dependencies.indexOf(dependency) < 0) {
 			dependencies.push(dependency);
-			this.dependencies[dependant] = dependencies;
+			this.dependencies.set(dependant, dependencies);
 		}
 
-		const dependants = this.dependants[dependency] || [];
+		const dependants = this.dependants.get(dependency) || [];
 		if (dependants.indexOf(dependant) < 0) {
 			dependants.push(dependant);
-			this.dependants[dependency] = dependants;
+			this.dependants.set(dependency, dependants);
 		}
 	}
 
 	public removeDependant(dependency: string, dependant: string) {
-		const dependencies = this.dependencies[dependency];
+		const dependencies = this.dependencies.get(dependency);
 		if (dependencies) {
 			const index = dependencies.indexOf(dependant);
 			if (index >= 0) {
@@ -29,7 +27,7 @@ class Graph {
 	}
 
 	public removeDependency(dependant: string, dependency: string) {
-		const dependants = this.dependants[dependency];
+		const dependants = this.dependants.get(dependency);
 		if (dependants) {
 			const index = dependants.indexOf(dependant);
 			if (index >= 0) {
@@ -39,14 +37,14 @@ class Graph {
 	}
 
 	public removeDependencies(dependant: string): string[] {
-		let dependencies = this.dependencies[dependant];
+		let dependencies = this.dependencies.get(dependant);
 		if (dependencies) {
 			dependencies = dependencies.slice();
 			dependencies.forEach(dependency => {
 				this.removeDependant(dependency, dependant);
 			});
 
-			delete this.dependencies[dependant];
+			this.dependencies.delete(dependant);
 			return dependencies;
 		} else {
 			return [];
@@ -54,14 +52,12 @@ class Graph {
 	}
 
 	public getDependantsOf(dependency: string): string[] {
-		return this.dependants[dependency] || [];
+		return this.dependants.get(dependency) || [];
 	}
 
 	public getDependenciesOf(dependant: string): string[] {
-		return this.dependencies[dependant] || [];
+		return this.dependencies.get(dependant) || [];
 	}
 }
 
-export {
-	Graph
-};
+export { Graph };

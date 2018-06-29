@@ -2,26 +2,19 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build",
-      "type": "shell",
-      "command": "npm",
-      "args": [
-        "run",
-        "build"
+      "type": "npm",
+      "script": "watch",
+      "problemMatcher": [
+        "$tsc-watch"
       ],
-      "isBackground": false,
-      "problemMatcher": "$tsc"
+      "isBackground": true
     },
     {
-      "label": "watch",
-      "type": "shell",
-      "command": "npm",
-      "args": [
-        "run",
-        "watch"
-      ],
-      "isBackground": false,
-      "problemMatcher": "$tsc-watch"
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": [
+        "$tsc"
+      ]
     }
   ]
 }

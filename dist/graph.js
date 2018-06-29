@@ -1,62 +1,59 @@
 "use strict";
-exports.__esModule = true;
-var utils_1 = require("./utils");
-var Graph = (function () {
-    function Graph() {
-        this.dependants = new utils_1.Map();
-        this.dependencies = new utils_1.Map();
+Object.defineProperty(exports, "__esModule", { value: true });
+class Graph {
+    constructor() {
+        this.dependants = new Map();
+        this.dependencies = new Map();
     }
-    Graph.prototype.addDependency = function (dependant, dependency) {
-        var dependencies = this.dependencies[dependant] || [];
+    addDependency(dependant, dependency) {
+        const dependencies = this.dependencies.get(dependant) || [];
         if (dependencies.indexOf(dependency) < 0) {
             dependencies.push(dependency);
-            this.dependencies[dependant] = dependencies;
+            this.dependencies.set(dependant, dependencies);
         }
-        var dependants = this.dependants[dependency] || [];
+        const dependants = this.dependants.get(dependency) || [];
         if (dependants.indexOf(dependant) < 0) {
             dependants.push(dependant);
-            this.dependants[dependency] = dependants;
+            this.dependants.set(dependency, dependants);
         }
-    };
-    Graph.prototype.removeDependant = function (dependency, dependant) {
-        var dependencies = this.dependencies[dependency];
+    }
+    removeDependant(dependency, dependant) {
+        const dependencies = this.dependencies.get(dependency);
         if (dependencies) {
-            var index = dependencies.indexOf(dependant);
+            const index = dependencies.indexOf(dependant);
             if (index >= 0) {
                 dependencies.splice(index, 1);
             }
         }
-    };
-    Graph.prototype.removeDependency = function (dependant, dependency) {
-        var dependants = this.dependants[dependency];
+    }
+    removeDependency(dependant, dependency) {
+        const dependants = this.dependants.get(dependency);
         if (dependants) {
-            var index = dependants.indexOf(dependant);
+            const index = dependants.indexOf(dependant);
             if (index >= 0) {
                 dependants.splice(index, 1);
             }
         }
-    };
-    Graph.prototype.removeDependencies = function (dependant) {
-        var _this = this;
-        var dependencies = this.dependencies[dependant];
+    }
+    removeDependencies(dependant) {
+        let dependencies = this.dependencies.get(dependant);
         if (dependencies) {
             dependencies = dependencies.slice();
-            dependencies.forEach(function (dependency) {
-                _this.removeDependant(dependency, dependant);
+            dependencies.forEach(dependency => {
+                this.removeDependant(dependency, dependant);
             });
-            delete this.dependencies[dependant];
+            this.dependencies.delete(dependant);
             return dependencies;
         }
         else {
             return [];
         }
-    };
-    Graph.prototype.getDependantsOf = function (dependency) {
-        return this.dependants[dependency] || [];
-    };
-    Graph.prototype.getDependenciesOf = function (dependant) {
-        return this.dependencies[dependant] || [];
-    };
-    return Graph;
-}());
+    }
+    getDependantsOf(dependency) {
+        return this.dependants.get(dependency) || [];
+    }
+    getDependenciesOf(dependant) {
+        return this.dependencies.get(dependant) || [];
+    }
+}
 exports.Graph = Graph;

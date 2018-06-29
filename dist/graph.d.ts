@@ -1,7 +1,6 @@
-import { Map } from './utils';
 declare class Graph {
-    dependants: Map<string[]>;
-    dependencies: Map<string[]>;
+    dependants: Map<string, string[]>;
+    dependencies: Map<string, string[]>;
     addDependency(dependant: string, dependency: string): void;
     removeDependant(dependency: string, dependant: string): void;
     removeDependency(dependant: string, dependency: string): void;

@@ -4,27 +4,50 @@ const Module = require('module');
 import * as path from 'path';
 import * as chokidar from 'chokidar';
 import { Graph } from './graph';
-import { Map, logInfo, logError, isEligible } from './utils';
 
-export type StashFn = (stash: any) => void;
+const nodeModulesPath = `${path.sep}node_modules${path.sep}`;
 
-export interface Hot {
+function isPackage(modulePath: string) {
+	return modulePath.indexOf(nodeModulesPath) > 0;
+}
+
+function isEligible(modulePath: string) {
+	return !isPackage(modulePath);
+}
+
+type StashCallback = (stash: any) => void;
+
+interface Constructor {
+	new(...args: any[]): any;
+}
+
+interface Options {
+	silent: boolean;
+}
+
+interface Hot {
+	configure(opts: Options): void;
 	accept(): void;
-	store(callback: StashFn): void;
-	restore(callback: StashFn): void;
+	store(callback: StashCallback): void;
+	restore(callback: StashCallback): void;
+	patch(...constructors: Constructor[]): void;
 }
 
 declare global {
 	interface NodeModule {
-		hot: Hot;
+		hot?: Hot;
 	}
 }
 
-interface IRegistryEntry {
-	id: string;
-	accepted: boolean;
-	stash: any;
-	store: () => void;
+class RegistryEntry {
+	constructor(
+		public id: string,
+		public mod: NodeModule,
+		public accepted = false,
+		public stash: Object | null = null,
+		public patchees = new Map<string, Constructor[]>(),
+		public store = () => { }
+	) { }
 }
 
 const _Module = {
@@ -32,40 +55,52 @@ const _Module = {
 	require: Module.prototype.require as Function
 };
 
-const graph = new Graph();
-const registry = new Map<IRegistryEntry>();
-const watcher = chokidar.watch([]);
+const _opts: Options = {
+	silent: false
+};
 
-watcher.on('change', (file: string) => {
-	const entry = registry[file];
-	if (entry) {
-		logInfo('Changed:', path.relative(process.cwd(), entry.id));
+const _graph = new Graph();
+const _registry = new Map<string, RegistryEntry>();
+const _watcher = chokidar.watch([]);
 
-		try {
-			reload(entry).forEach(acceptee => {
-				logInfo('Reloading:', path.relative(process.cwd(), acceptee));
-				_Module.require.call(module, acceptee);
-			});
-		} catch (err) {
-			logError(err);
+_watcher.on('change', (file: string) => {
+	const entry = _registry.get(file);
+	if (entry == null) { return; }
+
+	if (!_opts.silent) {
+		console.log('Changed:', path.relative(process.cwd(), entry.id));
+	}
+
+	const acceptees = reload(entry);
+	for (const acceptee of acceptees) {
+		if (!_opts.silent) {
+			console.log('Reloading:', path.relative(process.cwd(), acceptee));
 		}
+
+		_Module.require.call(entry.mod, acceptee);
 	}
 });
 
-function reload(entry: IRegistryEntry, acceptees = new Array<string>()) {
+function reload(entry: RegistryEntry, acceptees: string[] = []) {
 	entry.store();
-	delete require.cache[entry.id];
-	graph.removeDependencies(entry.id).forEach(d => watcher.unwatch(d));
 
-	const dependants = graph.getDependantsOf(entry.id);
+	// tslint:disable-next-line:no-dynamic-delete
+	delete require.cache[entry.id];
+
+	const removed = _graph.removeDependencies(entry.id);
+	for (const dependency of removed) {
+		_watcher.unwatch(dependency);
+	}
+
+	const dependants = _graph.getDependantsOf(entry.id);
 	if (entry.accepted || dependants.length === 0) {
 		if (acceptees.indexOf(entry.id) < 0) {
 			acceptees.push(entry.id);
 		}
 	} else {
 		for (const dependant of dependants) {
-			const dependantEntry = registry[dependant];
-			if (dependantEntry) {
+			const dependantEntry = _registry.get(dependant);
+			if (dependantEntry != null) {
 				reload(dependantEntry, acceptees);
 			}
 		}
@@ -74,44 +109,68 @@ function reload(entry: IRegistryEntry, acceptees = new Array<string>()) {
 	return acceptees;
 }
 
-function register(id: string) {
-	let entry = registry[id];
-
-	if (!entry) {
-		entry = {
-			id: id,
-			accepted: false,
-			stash: null,
-			store: () => { }
-		};
-
-		registry[id] = entry;
+function register(id: string, mod: NodeModule) {
+	let entry = _registry.get(id);
+	if (entry == null) {
+		entry = new RegistryEntry(id, mod);
+		_registry.set(id, entry);
 	}
 
 	return entry;
 }
 
-function inject(module: NodeModule, id: string) {
-	if (module.hot) {
-		return;
-	}
+function inject(mod: NodeModule, id: string) {
+	if (mod.hot != null) { return; }
 
-	const entry = register(id);
+	const entry = register(id, mod);
 
-	module.hot = {
+	mod.hot = {
+		configure: (opts: Options) => {
+			Object.assign(_opts, opts);
+		},
 		accept: () => {
 			entry.accepted = true;
 		},
-		store: (stasher: StashFn) => {
+		store: (stasher: StashCallback) => {
 			entry.store = () => {
 				entry.stash = {};
 				stasher(entry.stash);
 			};
 		},
-		restore: (stasher: StashFn) => {
+		restore: (stasher: StashCallback) => {
 			if (entry.stash) {
 				stasher(entry.stash);
 				entry.stash = null;
+			}
+		},
+		patch: (...constructors: Constructor[]) => {
+			const { patchees } = entry;
+
+			for (const current of constructors) {
+				const currentProto = current.prototype;
+
+				let history = patchees.get(current.name);
+				if (history == null) {
+					history = [];
+					patchees.set(current.name, history);
+				}
+
+				for (const old of history) {
+					const oldProto = old.prototype;
+
+					for (const key of Object.getOwnPropertyNames(currentProto)) {
+						const currentDesc = Object.getOwnPropertyDescriptor(currentProto, key)!;
+						const hasGetOrSet = currentDesc.get != null || currentDesc.set != null;
+
+						if (hasGetOrSet) {
+							Object.defineProperty(oldProto, key, currentDesc);
+						} else {
+							oldProto[key] = currentProto[key];
+						}
+					}
+				}
+
+				history.push(current);
 			}
 		}
 	};
@@ -126,8 +185,8 @@ Module.prototype.require = function (name: string) {
 		if (isEligible(modulePath)) {
 			const dependency = require.cache[modulePath] as NodeModule;
 			if (dependency) {
-				graph.addDependency(caller.filename, dependency.filename);
-				watcher.add([caller.filename, dependency.filename]);
+				_graph.addDependency(caller.filename, dependency.filename);
+				_watcher.add([caller.filename, dependency.filename]);
 			}
 		}
 	}

@@ -17,8 +17,10 @@
   "keywords": [
     "node",
     "hot",
+    "live",
     "reload",
-    "hot-reload"
+    "hot-reload",
+    "live-reload"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

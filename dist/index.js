@@ -1,107 +1,151 @@
 "use strict";
-exports.__esModule = true;
-var Module = require('module');
-var path = require("path");
-var chokidar = require("chokidar");
-var graph_1 = require("./graph");
-var utils_1 = require("./utils");
-var _Module = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const Module = require('module');
+const path = require("path");
+const chokidar = require("chokidar");
+const graph_1 = require("./graph");
+const nodeModulesPath = `${path.sep}node_modules${path.sep}`;
+function isPackage(modulePath) {
+    return modulePath.indexOf(nodeModulesPath) > 0;
+}
+function isEligible(modulePath) {
+    return !isPackage(modulePath);
+}
+class RegistryEntry {
+    constructor(id, mod, accepted = false, stash = null, patchees = new Map(), store = () => { }) {
+        this.id = id;
+        this.mod = mod;
+        this.accepted = accepted;
+        this.stash = stash;
+        this.patchees = patchees;
+        this.store = store;
+    }
+}
+const _Module = {
     load: Module.prototype.load,
     require: Module.prototype.require
 };
-var graph = new graph_1.Graph();
-var registry = new utils_1.Map();
-var watcher = chokidar.watch([]);
-watcher.on('change', function (file) {
-    var entry = registry[file];
-    if (entry) {
-        utils_1.logInfo('Changed:', path.relative(process.cwd(), entry.id));
-        try {
-            reload(entry).forEach(function (acceptee) {
-                utils_1.logInfo('Reloading:', path.relative(process.cwd(), acceptee));
-                _Module.require.call(module, acceptee);
-            });
+const _opts = {
+    silent: false
+};
+const _graph = new graph_1.Graph();
+const _registry = new Map();
+const _watcher = chokidar.watch([]);
+_watcher.on('change', (file) => {
+    const entry = _registry.get(file);
+    if (entry == null) {
+        return;
+    }
+    if (!_opts.silent) {
+        console.log('Changed:', path.relative(process.cwd(), entry.id));
+    }
+    const acceptees = reload(entry);
+    for (const acceptee of acceptees) {
+        if (!_opts.silent) {
+            console.log('Reloading:', path.relative(process.cwd(), acceptee));
         }
-        catch (err) {
-            utils_1.logError(err);
-        }
+        _Module.require.call(entry.mod, acceptee);
     }
 });
-function reload(entry, acceptees) {
-    if (acceptees === void 0) { acceptees = new Array(); }
+function reload(entry, acceptees = []) {
     entry.store();
     delete require.cache[entry.id];
-    graph.removeDependencies(entry.id).forEach(function (d) { return watcher.unwatch(d); });
-    var dependants = graph.getDependantsOf(entry.id);
+    const removed = _graph.removeDependencies(entry.id);
+    for (const dependency of removed) {
+        _watcher.unwatch(dependency);
+    }
+    const dependants = _graph.getDependantsOf(entry.id);
     if (entry.accepted || dependants.length === 0) {
         if (acceptees.indexOf(entry.id) < 0) {
             acceptees.push(entry.id);
         }
     }
     else {
-        for (var _i = 0, dependants_1 = dependants; _i < dependants_1.length; _i++) {
-            var dependant = dependants_1[_i];
-            var dependantEntry = registry[dependant];
-            if (dependantEntry) {
+        for (const dependant of dependants) {
+            const dependantEntry = _registry.get(dependant);
+            if (dependantEntry != null) {
                 reload(dependantEntry, acceptees);
             }
         }
     }
     return acceptees;
 }
-function register(id) {
-    var entry = registry[id];
-    if (!entry) {
-        entry = {
-            id: id,
-            accepted: false,
-            stash: null,
-            store: function () { }
-        };
-        registry[id] = entry;
+function register(id, mod) {
+    let entry = _registry.get(id);
+    if (entry == null) {
+        entry = new RegistryEntry(id, mod);
+        _registry.set(id, entry);
     }
     return entry;
 }
-function inject(module, id) {
-    if (module.hot) {
+function inject(mod, id) {
+    if (mod.hot != null) {
         return;
     }
-    var entry = register(id);
-    module.hot = {
-        accept: function () {
+    const entry = register(id, mod);
+    mod.hot = {
+        configure: (opts) => {
+            Object.assign(_opts, opts);
+        },
+        accept: () => {
             entry.accepted = true;
         },
-        store: function (stasher) {
-            entry.store = function () {
+        store: (stasher) => {
+            entry.store = () => {
                 entry.stash = {};
                 stasher(entry.stash);
             };
         },
-        restore: function (stasher) {
+        restore: (stasher) => {
             if (entry.stash) {
                 stasher(entry.stash);
                 entry.stash = null;
+            }
+        },
+        patch: (...constructors) => {
+            const { patchees } = entry;
+            for (const current of constructors) {
+                const currentProto = current.prototype;
+                let history = patchees.get(current.name);
+                if (history == null) {
+                    history = [];
+                    patchees.set(current.name, history);
+                }
+                for (const old of history) {
+                    const oldProto = old.prototype;
+                    for (const key of Object.getOwnPropertyNames(currentProto)) {
+                        const currentDesc = Object.getOwnPropertyDescriptor(currentProto, key);
+                        const hasGetOrSet = currentDesc.get != null || currentDesc.set != null;
+                        if (hasGetOrSet) {
+                            Object.defineProperty(oldProto, key, currentDesc);
+                        }
+                        else {
+                            oldProto[key] = currentProto[key];
+                        }
+                    }
+                }
+                history.push(current);
             }
         }
     };
 }
 Module.prototype.require = function (name) {
-    var caller = this;
-    var exports = _Module.require.call(caller, name);
+    const caller = this;
+    const exports = _Module.require.call(caller, name);
     if (caller !== process.mainModule) {
-        var modulePath = Module._resolveFilename(name, caller);
-        if (utils_1.isEligible(modulePath)) {
-            var dependency = require.cache[modulePath];
+        const modulePath = Module._resolveFilename(name, caller);
+        if (isEligible(modulePath)) {
+            const dependency = require.cache[modulePath];
             if (dependency) {
-                graph.addDependency(caller.filename, dependency.filename);
-                watcher.add([caller.filename, dependency.filename]);
+                _graph.addDependency(caller.filename, dependency.filename);
+                _watcher.add([caller.filename, dependency.filename]);
             }
         }
     }
     return exports;
 };
 Module.prototype.load = function (filename) {
-    if (utils_1.isEligible(filename)) {
+    if (isEligible(filename)) {
         inject(this, filename);
     }
     _Module.load.call(this, filename);
