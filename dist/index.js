@@ -30,7 +30,7 @@ const _opts = {
 };
 const _graph = new graph_1.Graph();
 const _registry = new Map();
-const _watcher = chokidar.watch([]);
+const _watcher = chokidar.watch([], { disableGlobbing: true });
 _watcher.on('change', (file) => {
     const entry = _registry.get(file);
     if (entry == null) {

@@ -61,7 +61,7 @@ const _opts: Options = {
 
 const _graph = new Graph();
 const _registry = new Map<string, RegistryEntry>();
-const _watcher = chokidar.watch([]);
+const _watcher = chokidar.watch([], { disableGlobbing: true });
 
 _watcher.on('change', (file: string) => {
 	const entry = _registry.get(file);
