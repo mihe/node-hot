@@ -123,6 +123,7 @@ function inject(mod, id) {
                             oldProto[key] = currentProto[key];
                         }
                     }
+                    Object.setPrototypeOf(oldProto, Object.getPrototypeOf(currentProto));
                 }
                 history.push(current);
             }

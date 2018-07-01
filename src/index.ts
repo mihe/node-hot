@@ -168,6 +168,11 @@ function inject(mod: NodeModule, id: string) {
 							oldProto[key] = currentProto[key];
 						}
 					}
+
+					Object.setPrototypeOf(
+						oldProto,
+						Object.getPrototypeOf(currentProto)
+					);
 				}
 
 				history.push(current);
