@@ -15,12 +15,18 @@
     "url": "https://github.com/mihe/node-hot/issues"
   },
   "keywords": [
-    "node",
     "hot",
+    "module",
+    "replacement",
+    "hmr",
     "live",
+    "reloading",
     "reload",
+    "hot-swap",
     "hot-reload",
-    "live-reload"
+    "live-reload",
+    "live-coding",
+    "live-swap"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
