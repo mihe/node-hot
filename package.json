@@ -1,6 +1,6 @@
 {
   "name": "node-hot",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "🔥 Hot-reloading for Node.js",
   "license": "MIT",
   "author": {
