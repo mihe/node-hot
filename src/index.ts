@@ -183,7 +183,7 @@ function inject(mod: NodeModule, id: string) {
 
 Module.prototype.require = function (name: string) {
 	const caller = this as NodeModule;
-	const exports = _Module.require.call(caller, name);
+	const xports = _Module.require.call(caller, name);
 
 	if (caller !== process.mainModule) {
 		const modulePath = Module._resolveFilename(name, caller) as string;
@@ -196,7 +196,7 @@ Module.prototype.require = function (name: string) {
 		}
 	}
 
-	return exports;
+	return xports;
 };
 
 Module.prototype.load = function (filename: string) {

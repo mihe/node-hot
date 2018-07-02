@@ -132,7 +132,7 @@ function inject(mod, id) {
 }
 Module.prototype.require = function (name) {
     const caller = this;
-    const exports = _Module.require.call(caller, name);
+    const xports = _Module.require.call(caller, name);
     if (caller !== process.mainModule) {
         const modulePath = Module._resolveFilename(name, caller);
         if (isEligible(modulePath)) {
@@ -143,7 +143,7 @@ Module.prototype.require = function (name) {
             }
         }
     }
-    return exports;
+    return xports;
 };
 Module.prototype.load = function (filename) {
     if (isEligible(filename)) {
