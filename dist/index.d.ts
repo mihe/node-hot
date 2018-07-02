@@ -3,7 +3,7 @@ interface Constructor {
     new (...args: any[]): any;
 }
 interface Options {
-    silent: boolean;
+    silent?: boolean;
 }
 interface Hot {
     configure(opts: Options): void;

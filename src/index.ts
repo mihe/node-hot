@@ -22,7 +22,7 @@ interface Constructor {
 }
 
 interface Options {
-	silent: boolean;
+	silent?: boolean;
 }
 
 interface Hot {
@@ -55,7 +55,7 @@ const _Module = {
 	require: Module.prototype.require as Function
 };
 
-const _opts: Options = {
+const _opts: Required<Options> = {
 	silent: false
 };
 
