@@ -10,6 +10,9 @@
     "**/dist": true,
     "package-lock.json": true
   },
+  "editor.rulers": [
+    80
+  ],
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "typescript.tsdk": "./node_modules/typescript/lib",
