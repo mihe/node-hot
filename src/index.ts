@@ -33,8 +33,8 @@ declare global {
 
 class RegistryEntry {
 	constructor(
-		public id: string,
 		public mod: NodeModule,
+		public filename: string,
 		public accepted = false,
 		public stash: Object | null = null,
 		public patchees = new Map<string, Constructor[]>(),
@@ -70,10 +70,9 @@ _watcher.on('change', (file: string) => {
 	const entry = _registry.get(file);
 	if (!entry) { return; }
 
-	log('Changed:', path.relative(process.cwd(), entry.id));
+	log('Changed:', path.relative(process.cwd(), entry.filename));
 
-	const acceptees = reload(entry);
-	for (const acceptee of acceptees) {
+	for (const acceptee of reload(entry)) {
 		log('Reloading:', path.relative(process.cwd(), acceptee));
 		_Module.require.call(entry.mod, acceptee);
 	}
@@ -83,17 +82,17 @@ function reload(entry: RegistryEntry, acceptees: string[] = []) {
 	entry.store();
 
 	// tslint:disable-next-line:no-dynamic-delete
-	delete require.cache[entry.id];
+	delete require.cache[entry.filename];
 
-	const removed = _graph.removeDependencies(entry.id);
+	const removed = _graph.removeDependencies(entry.filename);
 	for (const dependency of removed) {
 		_watcher.unwatch(dependency);
 	}
 
-	const dependants = _graph.getDependantsOf(entry.id);
+	const dependants = _graph.getDependantsOf(entry.filename);
 	if (entry.accepted || dependants.length === 0) {
-		if (acceptees.indexOf(entry.id) < 0) {
-			acceptees.push(entry.id);
+		if (acceptees.indexOf(entry.filename) < 0) {
+			acceptees.push(entry.filename);
 		}
 	} else {
 		for (const dependant of dependants) {
@@ -107,20 +106,20 @@ function reload(entry: RegistryEntry, acceptees: string[] = []) {
 	return acceptees;
 }
 
-function register(id: string, mod: NodeModule) {
-	let entry = _registry.get(id);
+function register(mod: NodeModule, filename: string) {
+	let entry = _registry.get(filename);
 	if (!entry) {
-		entry = new RegistryEntry(id, mod);
-		_registry.set(id, entry);
+		entry = new RegistryEntry(mod, filename);
+		_registry.set(filename, entry);
 	}
 
 	return entry;
 }
 
-function inject(mod: NodeModule, id: string) {
+function inject(mod: NodeModule, filename: string) {
 	if (mod.hot) { return; }
 
-	const entry = register(id, mod);
+	const entry = register(mod, filename);
 
 	mod.hot = {
 		accept: () => {
@@ -192,20 +191,26 @@ function patchExports(mod: NodeModule) {
 	}
 }
 
-Module.prototype.require = function (name: string) {
+Module.prototype.require = function (filename: string): any {
 	const caller = this as NodeModule;
-	const xports = _Module.require.call(caller, name);
+	const xports = _Module.require.call(caller, filename);
 
-	if (caller !== process.mainModule) {
-		const modulePath = Module._resolveFilename(name, caller) as string;
-		if (isEligible(modulePath)) {
-			const dependency = require.cache[modulePath] as NodeModule;
-			if (dependency) {
-				_graph.addDependency(caller.filename, dependency.filename);
-				_watcher.add([caller.filename, dependency.filename]);
-			}
-		}
+	if (caller === process.mainModule) {
+		return xports;
 	}
+
+	const modulePath = Module._resolveFilename(filename, caller) as string;
+	if (!isEligible(modulePath)) {
+		return xports;
+	}
+
+	const dependency = require.cache[modulePath] as NodeModule;
+	if (!dependency) {
+		return xports;
+	}
+
+	_graph.addDependency(caller.filename, dependency.filename);
+	_watcher.add([caller.filename, dependency.filename]);
 
 	return xports;
 };

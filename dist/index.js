@@ -6,9 +6,9 @@ const chokidar = require("chokidar");
 const graph_1 = require("./graph");
 const utils_1 = require("./utils");
 class RegistryEntry {
-    constructor(id, mod, accepted = false, stash = null, patchees = new Map(), store = () => { }) {
-        this.id = id;
+    constructor(mod, filename, accepted = false, stash = null, patchees = new Map(), store = () => { }) {
         this.mod = mod;
+        this.filename = filename;
         this.accepted = accepted;
         this.stash = stash;
         this.patchees = patchees;
@@ -40,24 +40,23 @@ _watcher.on('change', (file) => {
     if (!entry) {
         return;
     }
-    log('Changed:', path.relative(process.cwd(), entry.id));
-    const acceptees = reload(entry);
-    for (const acceptee of acceptees) {
+    log('Changed:', path.relative(process.cwd(), entry.filename));
+    for (const acceptee of reload(entry)) {
         log('Reloading:', path.relative(process.cwd(), acceptee));
         _Module.require.call(entry.mod, acceptee);
     }
 });
 function reload(entry, acceptees = []) {
     entry.store();
-    delete require.cache[entry.id];
-    const removed = _graph.removeDependencies(entry.id);
+    delete require.cache[entry.filename];
+    const removed = _graph.removeDependencies(entry.filename);
     for (const dependency of removed) {
         _watcher.unwatch(dependency);
     }
-    const dependants = _graph.getDependantsOf(entry.id);
+    const dependants = _graph.getDependantsOf(entry.filename);
     if (entry.accepted || dependants.length === 0) {
-        if (acceptees.indexOf(entry.id) < 0) {
-            acceptees.push(entry.id);
+        if (acceptees.indexOf(entry.filename) < 0) {
+            acceptees.push(entry.filename);
         }
     }
     else {
@@ -70,19 +69,19 @@ function reload(entry, acceptees = []) {
     }
     return acceptees;
 }
-function register(id, mod) {
-    let entry = _registry.get(id);
+function register(mod, filename) {
+    let entry = _registry.get(filename);
     if (!entry) {
-        entry = new RegistryEntry(id, mod);
-        _registry.set(id, entry);
+        entry = new RegistryEntry(mod, filename);
+        _registry.set(filename, entry);
     }
     return entry;
 }
-function inject(mod, id) {
+function inject(mod, filename) {
     if (mod.hot) {
         return;
     }
-    const entry = register(id, mod);
+    const entry = register(mod, filename);
     mod.hot = {
         accept: () => {
             entry.accepted = true;
@@ -140,19 +139,22 @@ function patchExports(mod) {
         mod.hot.patch(mod.exports);
     }
 }
-Module.prototype.require = function (name) {
+Module.prototype.require = function (filename) {
     const caller = this;
-    const xports = _Module.require.call(caller, name);
-    if (caller !== process.mainModule) {
-        const modulePath = Module._resolveFilename(name, caller);
-        if (utils_1.isEligible(modulePath)) {
-            const dependency = require.cache[modulePath];
-            if (dependency) {
-                _graph.addDependency(caller.filename, dependency.filename);
-                _watcher.add([caller.filename, dependency.filename]);
-            }
-        }
+    const xports = _Module.require.call(caller, filename);
+    if (caller === process.mainModule) {
+        return xports;
     }
+    const modulePath = Module._resolveFilename(filename, caller);
+    if (!utils_1.isEligible(modulePath)) {
+        return xports;
+    }
+    const dependency = require.cache[modulePath];
+    if (!dependency) {
+        return xports;
+    }
+    _graph.addDependency(caller.filename, dependency.filename);
+    _watcher.add([caller.filename, dependency.filename]);
     return xports;
 };
 Module.prototype.load = function (filename) {
