@@ -3,6 +3,7 @@ declare type StashCallback = (stash: any) => void;
 interface Options {
     silent?: boolean;
     patchExports?: boolean;
+    exclude?: RegExp[];
 }
 interface Hot {
     accept(): void;

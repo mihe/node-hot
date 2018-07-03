@@ -1,16 +1,5 @@
-import * as path from 'path';
-
 interface Constructor {
 	new(...args: any[]): any;
-}
-
-const _nodeModulesPath = `${path.sep}node_modules${path.sep}`;
-function isPackage(modulePath: string) {
-	return modulePath.indexOf(_nodeModulesPath) > 0;
-}
-
-function isEligible(modulePath: string) {
-	return !isPackage(modulePath);
 }
 
 function isFunction(value: any): value is Function {
@@ -50,7 +39,6 @@ function isPlainObject(value: any): value is Object {
 
 export {
 	Constructor,
-	isEligible,
 	isConstructorLike,
 	isObjectLike,
 	isPlainObject

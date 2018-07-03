@@ -6,7 +6,6 @@ import * as chokidar from 'chokidar';
 import { Graph } from './graph';
 import {
 	Constructor,
-	isEligible,
 	isPlainObject,
 	isConstructorLike
 } from './utils';
@@ -16,6 +15,7 @@ type StashCallback = (stash: any) => void;
 interface Options {
 	silent?: boolean;
 	patchExports?: boolean;
+	exclude?: RegExp[];
 }
 
 interface Hot {
@@ -47,21 +47,26 @@ const _Module = {
 	require: Module.prototype.require as Function
 };
 
-const _opts: Required<Options> = {
+const _cfg: Required<Options> = {
 	silent: false,
-	patchExports: false
+	patchExports: false,
+	exclude: [/[\/\\]node_modules[\/\\]/]
 };
 
 const _graph = new Graph();
 const _registry = new Map<string, RegistryEntry>();
 const _watcher = chokidar.watch([], { disableGlobbing: true });
 
+function isEligible(filename: string) {
+	return !_cfg.exclude.some(e => e.test(filename));
+}
+
 function configure(opts: Options) {
-	Object.assign(_opts, opts);
+	Object.assign(_cfg, opts);
 }
 
 function log(...params: any[]) {
-	if (!_opts.silent) {
+	if (!_cfg.silent) {
 		console.log('[node-hot]', ...params);
 	}
 }
@@ -223,7 +228,7 @@ Module.prototype.load = function (filename: string) {
 
 	_Module.load.call(this, filename);
 
-	if (eligible && _opts.patchExports) {
+	if (eligible && _cfg.patchExports) {
 		patchExports(this);
 	}
 };

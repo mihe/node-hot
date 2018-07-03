@@ -19,19 +19,23 @@ const _Module = {
     load: Module.prototype.load,
     require: Module.prototype.require
 };
-const _opts = {
+const _cfg = {
     silent: false,
-    patchExports: false
+    patchExports: false,
+    exclude: [/[\/\\]node_modules[\/\\]/]
 };
 const _graph = new graph_1.Graph();
 const _registry = new Map();
 const _watcher = chokidar.watch([], { disableGlobbing: true });
+function isEligible(filename) {
+    return !_cfg.exclude.some(e => e.test(filename));
+}
 function configure(opts) {
-    Object.assign(_opts, opts);
+    Object.assign(_cfg, opts);
 }
 exports.configure = configure;
 function log(...params) {
-    if (!_opts.silent) {
+    if (!_cfg.silent) {
         console.log('[node-hot]', ...params);
     }
 }
@@ -146,7 +150,7 @@ Module.prototype.require = function (filename) {
         return xports;
     }
     const modulePath = Module._resolveFilename(filename, caller);
-    if (!utils_1.isEligible(modulePath)) {
+    if (!isEligible(modulePath)) {
         return xports;
     }
     const dependency = require.cache[modulePath];
@@ -158,12 +162,12 @@ Module.prototype.require = function (filename) {
     return xports;
 };
 Module.prototype.load = function (filename) {
-    const eligible = utils_1.isEligible(filename);
+    const eligible = isEligible(filename);
     if (eligible) {
         inject(this, filename);
     }
     _Module.load.call(this, filename);
-    if (eligible && _opts.patchExports) {
+    if (eligible && _cfg.patchExports) {
         patchExports(this);
     }
 };
