@@ -129,16 +129,22 @@ function register(
 
 function assign(
 	target: Object,
-	source: Object
+	source: Object,
+	filter: (key: string) => boolean
 ) {
 	for (const key of Object.getOwnPropertyNames(source)) {
 		const desc = Object.getOwnPropertyDescriptor(source, key)!;
 		if (!desc.writable) { continue; }
 
 		if (desc.get || desc.set) {
-			Object.defineProperty(target, key, desc);
+			if (filter('function')) {
+				Object.defineProperty(target, key, desc);
+			}
 		} else {
-			target[key] = source[key];
+			const src = source[key];
+			if (filter(typeof src)) {
+				target[key] = src;
+			}
 		}
 	}
 }
@@ -178,7 +184,20 @@ function inject(
 				}
 
 				for (const old of history) {
-					assign(old.prototype, current.prototype);
+					// Patch static state into current
+					assign(current, old,
+						type => type !== 'function'
+					);
+
+					// Patch static methods into old
+					assign(old, current,
+						type => type === 'function'
+					);
+
+					// Patch regular methods into old
+					assign(old.prototype, current.prototype,
+						type => type === 'function'
+					);
 
 					Object.setPrototypeOf(
 						old.prototype,
