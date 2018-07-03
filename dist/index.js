@@ -81,6 +81,20 @@ function register(mod, filename) {
     }
     return entry;
 }
+function assign(target, source) {
+    for (const key of Object.getOwnPropertyNames(source)) {
+        const desc = Object.getOwnPropertyDescriptor(source, key);
+        if (!desc.writable) {
+            continue;
+        }
+        if (desc.get || desc.set) {
+            Object.defineProperty(target, key, desc);
+        }
+        else {
+            target[key] = source[key];
+        }
+    }
+}
 function inject(mod, filename) {
     if (mod.hot) {
         return;
@@ -105,25 +119,14 @@ function inject(mod, filename) {
         patch: (...constructors) => {
             const { patchees } = entry;
             for (const current of constructors) {
-                const currentProto = current.prototype;
                 let history = patchees.get(current.name);
                 if (history == null) {
                     history = [];
                     patchees.set(current.name, history);
                 }
                 for (const old of history) {
-                    const oldProto = old.prototype;
-                    const keys = Object.getOwnPropertyNames(currentProto);
-                    for (const key of keys) {
-                        const currentDesc = Object.getOwnPropertyDescriptor(currentProto, key);
-                        if (currentDesc.get || currentDesc.set) {
-                            Object.defineProperty(oldProto, key, currentDesc);
-                        }
-                        else {
-                            oldProto[key] = currentProto[key];
-                        }
-                    }
-                    Object.setPrototypeOf(oldProto, Object.getPrototypeOf(currentProto));
+                    assign(old.prototype, current.prototype);
+                    Object.setPrototypeOf(old.prototype, Object.getPrototypeOf(current.prototype));
                 }
                 history.push(current);
             }

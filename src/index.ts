@@ -83,7 +83,10 @@ _watcher.on('change', (file: string) => {
 	}
 });
 
-function reload(entry: RegistryEntry, acceptees: string[] = []) {
+function reload(
+	entry: RegistryEntry,
+	acceptees: string[] = []
+) {
 	entry.store();
 
 	// tslint:disable-next-line:no-dynamic-delete
@@ -111,7 +114,10 @@ function reload(entry: RegistryEntry, acceptees: string[] = []) {
 	return acceptees;
 }
 
-function register(mod: NodeModule, filename: string) {
+function register(
+	mod: NodeModule,
+	filename: string
+) {
 	let entry = _registry.get(filename);
 	if (!entry) {
 		entry = new RegistryEntry(mod, filename);
@@ -121,7 +127,26 @@ function register(mod: NodeModule, filename: string) {
 	return entry;
 }
 
-function inject(mod: NodeModule, filename: string) {
+function assign(
+	target: Object,
+	source: Object
+) {
+	for (const key of Object.getOwnPropertyNames(source)) {
+		const desc = Object.getOwnPropertyDescriptor(source, key)!;
+		if (!desc.writable) { continue; }
+
+		if (desc.get || desc.set) {
+			Object.defineProperty(target, key, desc);
+		} else {
+			target[key] = source[key];
+		}
+	}
+}
+
+function inject(
+	mod: NodeModule,
+	filename: string
+) {
 	if (mod.hot) { return; }
 
 	const entry = register(mod, filename);
@@ -146,8 +171,6 @@ function inject(mod: NodeModule, filename: string) {
 			const { patchees } = entry;
 
 			for (const current of constructors) {
-				const currentProto = current.prototype;
-
 				let history = patchees.get(current.name);
 				if (history == null) {
 					history = [];
@@ -155,25 +178,11 @@ function inject(mod: NodeModule, filename: string) {
 				}
 
 				for (const old of history) {
-					const oldProto = old.prototype;
-
-					const keys = Object.getOwnPropertyNames(currentProto);
-					for (const key of keys) {
-						const currentDesc = Object.getOwnPropertyDescriptor(
-							currentProto,
-							key
-						)!;
-
-						if (currentDesc.get || currentDesc.set) {
-							Object.defineProperty(oldProto, key, currentDesc);
-						} else {
-							oldProto[key] = currentProto[key];
-						}
-					}
+					assign(old.prototype, current.prototype);
 
 					Object.setPrototypeOf(
-						oldProto,
-						Object.getPrototypeOf(currentProto)
+						old.prototype,
+						Object.getPrototypeOf(current.prototype)
 					);
 				}
 
