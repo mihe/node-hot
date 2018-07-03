@@ -199,6 +199,7 @@ function inject(
 						type => type === 'function'
 					);
 
+					// Patch prototype into old
 					Object.setPrototypeOf(
 						old.prototype,
 						Object.getPrototypeOf(current.prototype)
