@@ -15,7 +15,7 @@ type StashCallback = (stash: any) => void;
 
 interface Options {
 	silent?: boolean;
-	autoPatch?: boolean;
+	patchExports?: boolean;
 }
 
 interface Hot {
@@ -49,7 +49,7 @@ const _Module = {
 
 const _opts: Required<Options> = {
 	silent: false,
-	autoPatch: false
+	patchExports: false
 };
 
 const _graph = new Graph();
@@ -223,7 +223,7 @@ Module.prototype.load = function (filename: string) {
 
 	_Module.load.call(this, filename);
 
-	if (eligible && _opts.autoPatch) {
+	if (eligible && _opts.patchExports) {
 		patchExports(this);
 	}
 };

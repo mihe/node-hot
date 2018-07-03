@@ -2,7 +2,7 @@ import { Constructor } from './utils';
 declare type StashCallback = (stash: any) => void;
 interface Options {
     silent?: boolean;
-    autoPatch?: boolean;
+    patchExports?: boolean;
 }
 interface Hot {
     accept(): void;

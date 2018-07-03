@@ -21,7 +21,7 @@ const _Module = {
 };
 const _opts = {
     silent: false,
-    autoPatch: false
+    patchExports: false
 };
 const _graph = new graph_1.Graph();
 const _registry = new Map();
@@ -163,7 +163,7 @@ Module.prototype.load = function (filename) {
         inject(this, filename);
     }
     _Module.load.call(this, filename);
-    if (eligible && _opts.autoPatch) {
+    if (eligible && _opts.patchExports) {
         patchExports(this);
     }
 };
