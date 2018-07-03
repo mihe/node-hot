@@ -4,13 +4,7 @@ const Module = require('module');
 const path = require("path");
 const chokidar = require("chokidar");
 const graph_1 = require("./graph");
-const nodeModulesPath = `${path.sep}node_modules${path.sep}`;
-function isPackage(modulePath) {
-    return modulePath.indexOf(nodeModulesPath) > 0;
-}
-function isEligible(modulePath) {
-    return !isPackage(modulePath);
-}
+const utils_1 = require("./utils");
 class RegistryEntry {
     constructor(id, mod, accepted = false, stash = null, patchees = new Map(), store = () => { }) {
         this.id = id;
@@ -26,24 +20,30 @@ const _Module = {
     require: Module.prototype.require
 };
 const _opts = {
-    silent: false
+    silent: false,
+    autoPatch: false
 };
 const _graph = new graph_1.Graph();
 const _registry = new Map();
 const _watcher = chokidar.watch([], { disableGlobbing: true });
+function configure(opts) {
+    Object.assign(_opts, opts);
+}
+exports.configure = configure;
+function log(...params) {
+    if (!_opts.silent) {
+        console.log('[node-hot]', ...params);
+    }
+}
 _watcher.on('change', (file) => {
     const entry = _registry.get(file);
-    if (entry == null) {
+    if (!entry) {
         return;
     }
-    if (!_opts.silent) {
-        console.log('Changed:', path.relative(process.cwd(), entry.id));
-    }
+    log('Changed:', path.relative(process.cwd(), entry.id));
     const acceptees = reload(entry);
     for (const acceptee of acceptees) {
-        if (!_opts.silent) {
-            console.log('Reloading:', path.relative(process.cwd(), acceptee));
-        }
+        log('Reloading:', path.relative(process.cwd(), acceptee));
         _Module.require.call(entry.mod, acceptee);
     }
 });
@@ -63,7 +63,7 @@ function reload(entry, acceptees = []) {
     else {
         for (const dependant of dependants) {
             const dependantEntry = _registry.get(dependant);
-            if (dependantEntry != null) {
+            if (dependantEntry) {
                 reload(dependantEntry, acceptees);
             }
         }
@@ -72,21 +72,18 @@ function reload(entry, acceptees = []) {
 }
 function register(id, mod) {
     let entry = _registry.get(id);
-    if (entry == null) {
+    if (!entry) {
         entry = new RegistryEntry(id, mod);
         _registry.set(id, entry);
     }
     return entry;
 }
 function inject(mod, id) {
-    if (mod.hot != null) {
+    if (mod.hot) {
         return;
     }
     const entry = register(id, mod);
     mod.hot = {
-        configure: (opts) => {
-            Object.assign(_opts, opts);
-        },
         accept: () => {
             entry.accepted = true;
         },
@@ -113,10 +110,10 @@ function inject(mod, id) {
                 }
                 for (const old of history) {
                     const oldProto = old.prototype;
-                    for (const key of Object.getOwnPropertyNames(currentProto)) {
+                    const keys = Object.getOwnPropertyNames(currentProto);
+                    for (const key of keys) {
                         const currentDesc = Object.getOwnPropertyDescriptor(currentProto, key);
-                        const hasGetOrSet = currentDesc.get != null || currentDesc.set != null;
-                        if (hasGetOrSet) {
+                        if (currentDesc.get || currentDesc.set) {
                             Object.defineProperty(oldProto, key, currentDesc);
                         }
                         else {
@@ -130,12 +127,25 @@ function inject(mod, id) {
         }
     };
 }
+function patchExports(mod) {
+    if (utils_1.isPlainObject(mod.exports)) {
+        for (const key of Object.getOwnPropertyNames(mod.exports)) {
+            const xport = mod.exports[key];
+            if (utils_1.isConstructorLike(xport)) {
+                mod.hot.patch(xport);
+            }
+        }
+    }
+    else if (utils_1.isConstructorLike(mod.exports)) {
+        mod.hot.patch(mod.exports);
+    }
+}
 Module.prototype.require = function (name) {
     const caller = this;
     const xports = _Module.require.call(caller, name);
     if (caller !== process.mainModule) {
         const modulePath = Module._resolveFilename(name, caller);
-        if (isEligible(modulePath)) {
+        if (utils_1.isEligible(modulePath)) {
             const dependency = require.cache[modulePath];
             if (dependency) {
                 _graph.addDependency(caller.filename, dependency.filename);
@@ -146,8 +156,12 @@ Module.prototype.require = function (name) {
     return xports;
 };
 Module.prototype.load = function (filename) {
-    if (isEligible(filename)) {
+    const eligible = utils_1.isEligible(filename);
+    if (eligible) {
         inject(this, filename);
     }
     _Module.load.call(this, filename);
+    if (eligible && _opts.autoPatch) {
+        patchExports(this);
+    }
 };

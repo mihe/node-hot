@@ -4,29 +4,21 @@ const Module = require('module');
 import * as path from 'path';
 import * as chokidar from 'chokidar';
 import { Graph } from './graph';
-
-const nodeModulesPath = `${path.sep}node_modules${path.sep}`;
-
-function isPackage(modulePath: string) {
-	return modulePath.indexOf(nodeModulesPath) > 0;
-}
-
-function isEligible(modulePath: string) {
-	return !isPackage(modulePath);
-}
+import {
+	Constructor,
+	isEligible,
+	isPlainObject,
+	isConstructorLike
+} from './utils';
 
 type StashCallback = (stash: any) => void;
 
-interface Constructor {
-	new(...args: any[]): any;
-}
-
 interface Options {
 	silent?: boolean;
+	autoPatch?: boolean;
 }
 
 interface Hot {
-	configure(opts: Options): void;
 	accept(): void;
 	store(callback: StashCallback): void;
 	restore(callback: StashCallback): void;
@@ -56,27 +48,33 @@ const _Module = {
 };
 
 const _opts: Required<Options> = {
-	silent: false
+	silent: false,
+	autoPatch: false
 };
 
 const _graph = new Graph();
 const _registry = new Map<string, RegistryEntry>();
 const _watcher = chokidar.watch([], { disableGlobbing: true });
 
+function configure(opts: Options) {
+	Object.assign(_opts, opts);
+}
+
+function log(...params: any[]) {
+	if (!_opts.silent) {
+		console.log('[node-hot]', ...params);
+	}
+}
+
 _watcher.on('change', (file: string) => {
 	const entry = _registry.get(file);
-	if (entry == null) { return; }
+	if (!entry) { return; }
 
-	if (!_opts.silent) {
-		console.log('Changed:', path.relative(process.cwd(), entry.id));
-	}
+	log('Changed:', path.relative(process.cwd(), entry.id));
 
 	const acceptees = reload(entry);
 	for (const acceptee of acceptees) {
-		if (!_opts.silent) {
-			console.log('Reloading:', path.relative(process.cwd(), acceptee));
-		}
-
+		log('Reloading:', path.relative(process.cwd(), acceptee));
 		_Module.require.call(entry.mod, acceptee);
 	}
 });
@@ -100,7 +98,7 @@ function reload(entry: RegistryEntry, acceptees: string[] = []) {
 	} else {
 		for (const dependant of dependants) {
 			const dependantEntry = _registry.get(dependant);
-			if (dependantEntry != null) {
+			if (dependantEntry) {
 				reload(dependantEntry, acceptees);
 			}
 		}
@@ -111,7 +109,7 @@ function reload(entry: RegistryEntry, acceptees: string[] = []) {
 
 function register(id: string, mod: NodeModule) {
 	let entry = _registry.get(id);
-	if (entry == null) {
+	if (!entry) {
 		entry = new RegistryEntry(id, mod);
 		_registry.set(id, entry);
 	}
@@ -120,14 +118,11 @@ function register(id: string, mod: NodeModule) {
 }
 
 function inject(mod: NodeModule, id: string) {
-	if (mod.hot != null) { return; }
+	if (mod.hot) { return; }
 
 	const entry = register(id, mod);
 
 	mod.hot = {
-		configure: (opts: Options) => {
-			Object.assign(_opts, opts);
-		},
 		accept: () => {
 			entry.accepted = true;
 		},
@@ -158,11 +153,14 @@ function inject(mod: NodeModule, id: string) {
 				for (const old of history) {
 					const oldProto = old.prototype;
 
-					for (const key of Object.getOwnPropertyNames(currentProto)) {
-						const currentDesc = Object.getOwnPropertyDescriptor(currentProto, key)!;
-						const hasGetOrSet = currentDesc.get != null || currentDesc.set != null;
+					const keys = Object.getOwnPropertyNames(currentProto);
+					for (const key of keys) {
+						const currentDesc = Object.getOwnPropertyDescriptor(
+							currentProto,
+							key
+						)!;
 
-						if (hasGetOrSet) {
+						if (currentDesc.get || currentDesc.set) {
 							Object.defineProperty(oldProto, key, currentDesc);
 						} else {
 							oldProto[key] = currentProto[key];
@@ -179,6 +177,19 @@ function inject(mod: NodeModule, id: string) {
 			}
 		}
 	};
+}
+
+function patchExports(mod: NodeModule) {
+	if (isPlainObject(mod.exports)) {
+		for (const key of Object.getOwnPropertyNames(mod.exports)) {
+			const xport = mod.exports[key];
+			if (isConstructorLike(xport)) {
+				mod.hot!.patch(xport);
+			}
+		}
+	} else if (isConstructorLike(mod.exports)) {
+		mod.hot!.patch(mod.exports);
+	}
 }
 
 Module.prototype.require = function (name: string) {
@@ -200,9 +211,16 @@ Module.prototype.require = function (name: string) {
 };
 
 Module.prototype.load = function (filename: string) {
-	if (isEligible(filename)) {
+	const eligible = isEligible(filename);
+	if (eligible) {
 		inject(this, filename);
 	}
 
 	_Module.load.call(this, filename);
+
+	if (eligible && _opts.autoPatch) {
+		patchExports(this);
+	}
 };
+
+export { configure };

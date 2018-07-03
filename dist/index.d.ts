@@ -1,12 +1,10 @@
+import { Constructor } from './utils';
 declare type StashCallback = (stash: any) => void;
-interface Constructor {
-    new (...args: any[]): any;
-}
 interface Options {
     silent?: boolean;
+    autoPatch?: boolean;
 }
 interface Hot {
-    configure(opts: Options): void;
     accept(): void;
     store(callback: StashCallback): void;
     restore(callback: StashCallback): void;
@@ -17,4 +15,5 @@ declare global {
         hot?: Hot;
     }
 }
-export {};
+declare function configure(opts: Options): void;
+export { configure };
