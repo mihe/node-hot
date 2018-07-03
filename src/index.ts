@@ -57,10 +57,6 @@ const _graph = new Graph();
 const _registry = new Map<string, RegistryEntry>();
 const _watcher = chokidar.watch([], { disableGlobbing: true });
 
-function isEligible(filename: string) {
-	return !_cfg.exclude.some(e => e.test(filename));
-}
-
 function configure(opts: Options) {
 	Object.assign(_cfg, opts);
 }
@@ -69,6 +65,10 @@ function log(...params: any[]) {
 	if (!_cfg.silent) {
 		console.log('[node-hot]', ...params);
 	}
+}
+
+function isEligible(filename: string) {
+	return !_cfg.exclude.some(e => e.test(filename));
 }
 
 _watcher.on('change', (file: string) => {
