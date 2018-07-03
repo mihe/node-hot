@@ -17,23 +17,28 @@ npm install --save-dev node-hot
 // --- main.js ---
 
 // Will only hot reload after this
-require('node-hot');
+require('node-hot')
+    // Globally configure node-hot (optional)
+    .configure({
+        // Disable logging (default: false)
+        silent: true,
+
+        // Automatically patch all exported classes (default: false)
+        patchExports: true
+    });
 
 // Main/entry module can't be reloaded, hence the extra file
 require('./app');
+```
 
+```js
 // --- app.js ---
 
 class Foo {}
 let foo;
 
 if (module.hot) {
-    // Globally configure node-hot (optional)
-    module.hot.configure({
-        silent: true // Disables logging (default: false)
-    });
-
-    // Reload this module and everything that it requires (optional)
+    // Reload this module and its dependencies, when they change (optional)
     module.hot.accept();
 
     // Gets called before reload (optional)
