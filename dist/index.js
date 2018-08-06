@@ -81,25 +81,6 @@ function register(mod, filename) {
     }
     return entry;
 }
-function assign(target, source, filter) {
-    for (const key of Object.getOwnPropertyNames(source)) {
-        const desc = Object.getOwnPropertyDescriptor(source, key);
-        if (!desc.writable) {
-            continue;
-        }
-        if (desc.get || desc.set) {
-            if (filter('function')) {
-                Object.defineProperty(target, key, desc);
-            }
-        }
-        else {
-            const src = source[key];
-            if (filter(typeof src)) {
-                target[key] = src;
-            }
-        }
-    }
-}
 function inject(mod, filename) {
     if (mod.hot) {
         return;
@@ -130,9 +111,9 @@ function inject(mod, filename) {
                     patchees.set(current.name, history);
                 }
                 for (const old of history) {
-                    assign(current, old, type => type !== 'function');
-                    assign(old, current, type => type === 'function');
-                    assign(old.prototype, current.prototype, type => type === 'function');
+                    utils_1.assign(current, old, type => type !== 'function');
+                    utils_1.assign(old, current, type => type === 'function');
+                    utils_1.assign(old.prototype, current.prototype, type => type === 'function');
                     Object.setPrototypeOf(old.prototype, Object.getPrototypeOf(current.prototype));
                 }
                 history.push(current);

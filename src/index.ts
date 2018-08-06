@@ -5,11 +5,12 @@ import * as path from 'path';
 import * as chokidar from 'chokidar';
 import { Graph } from './graph';
 import {
-	Constructor,
 	isPlainObject,
-	isConstructorLike
+	isConstructorLike,
+	assign
 } from './utils';
 
+type Constructor = new (...args: any[]) => any;
 type StashCallback = (stash: any) => void;
 
 interface Options {
@@ -125,28 +126,6 @@ function register(
 	}
 
 	return entry;
-}
-
-function assign(
-	target: Object,
-	source: Object,
-	filter: (key: string) => boolean
-) {
-	for (const key of Object.getOwnPropertyNames(source)) {
-		const desc = Object.getOwnPropertyDescriptor(source, key)!;
-		if (!desc.writable) { continue; }
-
-		if (desc.get || desc.set) {
-			if (filter('function')) {
-				Object.defineProperty(target, key, desc);
-			}
-		} else {
-			const src = source[key];
-			if (filter(typeof src)) {
-				target[key] = src;
-			}
-		}
-	}
 }
 
 function inject(

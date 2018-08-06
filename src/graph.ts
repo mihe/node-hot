@@ -1,4 +1,5 @@
-class Graph {
+/** @internal */
+export class Graph {
 	public dependants = new Map<string, string[]>();
 	public dependencies = new Map<string, string[]>();
 
@@ -59,5 +60,3 @@ class Graph {
 		return this.dependencies.get(dependant) || [];
 	}
 }
-
-export { Graph };

@@ -1,4 +1,4 @@
-import { Constructor } from './utils';
+declare type Constructor = new (...args: any[]) => any;
 declare type StashCallback = (stash: any) => void;
 interface Options {
     silent?: boolean;

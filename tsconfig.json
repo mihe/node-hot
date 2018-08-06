@@ -26,6 +26,7 @@
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
+    "stripInternal": true,
     "suppressImplicitAnyIndexErrors": true
   },
   "include": [

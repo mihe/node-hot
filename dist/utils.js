@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 function isFunction(value) {
     return typeof value === 'function';
 }
+exports.isFunction = isFunction;
 function isConstructorLike(value) {
     return isFunction(value);
 }
@@ -26,3 +27,23 @@ function isPlainObject(value) {
     return outerMostProto === proto;
 }
 exports.isPlainObject = isPlainObject;
+function assign(target, source, filter) {
+    for (const key of Object.getOwnPropertyNames(source)) {
+        const desc = Object.getOwnPropertyDescriptor(source, key);
+        if (!desc.writable) {
+            continue;
+        }
+        if (desc.get || desc.set) {
+            if (filter('function')) {
+                Object.defineProperty(target, key, desc);
+            }
+        }
+        else {
+            const src = source[key];
+            if (filter(typeof src)) {
+                target[key] = src;
+            }
+        }
+    }
+}
+exports.assign = assign;
