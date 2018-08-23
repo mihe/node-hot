@@ -1,8 +1,8 @@
 // tslint:disable-next-line:variable-name
 const Module = require('module');
 
+import chokidar from 'chokidar';
 import * as path from 'path';
-import * as chokidar from 'chokidar';
 import { Graph } from './graph';
 import {
 	isPlainObject,

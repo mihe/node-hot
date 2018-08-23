@@ -1,8 +1,18 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const Module = require('module');
-const path = require("path");
-const chokidar = require("chokidar");
+const chokidar_1 = __importDefault(require("chokidar"));
+const path = __importStar(require("path"));
 const graph_1 = require("./graph");
 const utils_1 = require("./utils");
 class RegistryEntry {
@@ -26,7 +36,7 @@ const _cfg = {
 };
 const _graph = new graph_1.Graph();
 const _registry = new Map();
-const _watcher = chokidar.watch([], { disableGlobbing: true });
+const _watcher = chokidar_1.default.watch([], { disableGlobbing: true });
 function configure(opts) {
     Object.assign(_cfg, opts);
 }
