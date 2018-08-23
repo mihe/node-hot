@@ -60,7 +60,8 @@ _watcher.on('change', (file) => {
         _Module.require.call(entry.mod, acceptee);
     }
 });
-function reload(entry, acceptees = []) {
+function reload(entry, acceptees = new Set(), reloaded = new Set()) {
+    reloaded.add(entry);
     entry.store();
     delete require.cache[entry.filename];
     const removed = _graph.removeDependencies(entry.filename);
@@ -69,15 +70,13 @@ function reload(entry, acceptees = []) {
     }
     const dependants = _graph.getDependantsOf(entry.filename);
     if (entry.accepted || dependants.length === 0) {
-        if (acceptees.indexOf(entry.filename) < 0) {
-            acceptees.push(entry.filename);
-        }
+        acceptees.add(entry.filename);
     }
     else {
         for (const dependant of dependants) {
             const dependantEntry = _registry.get(dependant);
-            if (dependantEntry) {
-                reload(dependantEntry, acceptees);
+            if (dependantEntry && !reloaded.has(dependantEntry)) {
+                reload(dependantEntry, acceptees, reloaded);
             }
         }
     }

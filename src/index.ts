@@ -86,8 +86,11 @@ _watcher.on('change', (file: string) => {
 
 function reload(
 	entry: RegistryEntry,
-	acceptees: string[] = []
+	acceptees = new Set<string>(),
+	reloaded = new Set<RegistryEntry>()
 ) {
+	reloaded.add(entry);
+
 	entry.store();
 
 	// tslint:disable-next-line:no-dynamic-delete
@@ -100,14 +103,12 @@ function reload(
 
 	const dependants = _graph.getDependantsOf(entry.filename);
 	if (entry.accepted || dependants.length === 0) {
-		if (acceptees.indexOf(entry.filename) < 0) {
-			acceptees.push(entry.filename);
-		}
+		acceptees.add(entry.filename);
 	} else {
 		for (const dependant of dependants) {
 			const dependantEntry = _registry.get(dependant);
-			if (dependantEntry) {
-				reload(dependantEntry, acceptees);
+			if (dependantEntry && !reloaded.has(dependantEntry)) {
+				reload(dependantEntry, acceptees, reloaded);
 			}
 		}
 	}
