@@ -3,15 +3,15 @@
 node-hot is a Node.js package that will automatically monitor and hot reload
 modules (stuff that you `require`).
 
-Based off of [this article by Kenneth Chung][kentor].
+Based on [this article by Kenneth Chung][kentor].
 
-### Installation
+## Installation
 
-```
+```shell
 npm install --save-dev node-hot
 ```
 
-### Usage
+## Usage
 
 ```js
 // --- main.js ---
@@ -76,6 +76,5 @@ You can choose to omit `accept` entirely, in which case node-hot will automatica
 ## License
 
 See [LICENSE](LICENSE).
-
 
 [kentor]: https://kentor.me/posts/node-js-hot-reloading-development/
