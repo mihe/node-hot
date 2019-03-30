@@ -146,9 +146,6 @@ function patchExports(mod) {
 Module.prototype.require = function (filename) {
     const caller = this;
     const xports = _Module.require.call(caller, filename);
-    if (caller === process.mainModule) {
-        return xports;
-    }
     const modulePath = Module._resolveFilename(filename, caller);
     if (!isEligible(modulePath)) {
         return xports;
@@ -157,8 +154,10 @@ Module.prototype.require = function (filename) {
     if (!dependency) {
         return xports;
     }
-    _graph.addDependency(caller.filename, dependency.filename);
-    _watcher.add([caller.filename, dependency.filename]);
+    if (caller !== process.mainModule) {
+        _graph.addDependency(caller.filename, dependency.filename);
+    }
+    _watcher.add(dependency.filename);
     return xports;
 };
 Module.prototype.load = function (filename) {

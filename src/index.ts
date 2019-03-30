@@ -209,10 +209,6 @@ Module.prototype.require = function (filename: string): any {
 	const caller = this as NodeModule;
 	const xports = _Module.require.call(caller, filename);
 
-	if (caller === process.mainModule) {
-		return xports;
-	}
-
 	const modulePath = Module._resolveFilename(filename, caller) as string;
 	if (!isEligible(modulePath)) {
 		return xports;
@@ -223,8 +219,11 @@ Module.prototype.require = function (filename: string): any {
 		return xports;
 	}
 
-	_graph.addDependency(caller.filename, dependency.filename);
-	_watcher.add([caller.filename, dependency.filename]);
+	if (caller !== process.mainModule) {
+		_graph.addDependency(caller.filename, dependency.filename);
+	}
+
+	_watcher.add(dependency.filename);
 
 	return xports;
 };
